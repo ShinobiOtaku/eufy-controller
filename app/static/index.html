@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+    <meta name="theme-color" content="#08111f">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Eufy security panel</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="app.css">
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <main class="shell" aria-labelledby="page-title">
+      <header class="topbar">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 48 48" role="img">
+            <path d="M24 4 41 11v12c0 10.7-6.8 18.1-17 22C13.8 41.1 7 33.7 7 23V11L24 4Z"/>
+            <path class="brand-mark-cut" d="m17.5 24.4 4.1 4.1 9.3-10"/>
+          </svg>
+        </div>
+        <div>
+          <p class="eyebrow">FRONT DOOR</p>
+          <h1 id="page-title">Home security</h1>
+        </div>
+        <div class="connection" id="connection" aria-live="polite">
+          <span class="connection-dot"></span>
+          <span id="connection-label">Connecting</span>
+        </div>
+      </header>
+
+      <aside class="demo-banner" id="demo-banner" hidden>
+        <span>POC DEMO</span>
+        No camera commands are being sent
+      </aside>
+
+      <section class="status-card" aria-labelledby="mode-label">
+        <div class="shield" id="shield" aria-hidden="true">
+          <svg viewBox="0 0 64 72">
+            <path d="M32 3 58 13v20c0 17-10.6 29.2-26 35C16.6 62.2 6 50 6 33V13L32 3Z"/>
+            <path class="shield-glyph" id="shield-glyph" d="M22 36.5 29 43l14-16"/>
+          </svg>
+        </div>
+        <div class="status-copy">
+          <p class="status-kicker">CURRENT MODE</p>
+          <h2 id="mode-label">Checking…</h2>
+          <p id="mode-description">Contacting the local panel</p>
+          <p class="confirmed" id="confirmed">Waiting for confirmation</p>
+        </div>
+      </section>
+
+      <section class="controls" aria-label="Security modes">
+        <button class="mode-button schedule" type="button" data-mode="schedule">
+          <span class="button-icon" aria-hidden="true">
+            <svg viewBox="0 0 32 32"><rect x="4" y="6" width="24" height="22" rx="4"/><path class="line" d="M9 3v6m14-6v6M4 12h24m-12 5v6l4 2"/></svg>
+          </span>
+          <span class="button-title">Schedule</span>
+          <span class="button-detail">Follow timetable</span>
+        </button>
+
+        <button class="mode-button away" type="button" data-mode="away">
+          <span class="button-icon" aria-hidden="true">
+            <svg viewBox="0 0 32 32"><path d="M16 3 28 8v8.5C28 24 23.3 29 16 31 8.7 29 4 24 4 16.5V8l12-5Z"/><path class="line" d="M11 17.2 14.5 21l7-8"/></svg>
+          </span>
+          <span class="button-title">Away</span>
+          <span class="button-detail">Full monitoring</span>
+        </button>
+      </section>
+
+      <div class="message" id="message" role="status" aria-live="polite"></div>
+
+      <footer>
+        <span id="provider">Local panel</span>
+        <button class="refresh" type="button" id="refresh">Refresh status</button>
+      </footer>
+    </main>
+
+  </body>
+</html>

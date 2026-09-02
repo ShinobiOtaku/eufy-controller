@@ -1,0 +1,33 @@
+[Unit]
+Description=Local Eufy touchscreen security panel
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=eufypanel
+Group=eufypanel
+WorkingDirectory=/opt/eufy-panel
+EnvironmentFile=/etc/eufy-panel.env
+ExecStart=/usr/bin/python3 /opt/eufy-panel/server.py
+Restart=on-failure
+RestartSec=3
+UMask=0077
+
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+ProtectClock=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RestrictAddressFamilies=AF_INET AF_INET6
+ReadWritePaths=/var/lib/eufy-panel
+
+[Install]
+WantedBy=multi-user.target

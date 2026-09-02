@@ -1,0 +1,60 @@
+#!/usr/bin/env python3
+"""Submit a Eufy two-factor code without exposing it in the process list."""
+
+import getpass
+import json
+import sys
+import time
+
+from websockets.sync.client import connect
+
+
+def receive(socket, timeout=8):
+    message = socket.recv(timeout=timeout)
+    if isinstance(message, bytes):
+        message = message.decode("utf-8")
+    return json.loads(message)
+
+
+def wait_result(socket, message_id, timeout=12):
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        message = receive(socket, max(0.1, deadline - time.monotonic()))
+        if message.get("type") == "result" and message.get("messageId") == message_id:
+            if not message.get("success"):
+                raise RuntimeError(message.get("errorCode", "command rejected"))
+            return message.get("result")
+    raise TimeoutError("Eufy bridge did not respond")
+
+
+def command(socket, message_id, name, **values):
+    socket.send(json.dumps({"messageId": message_id, "command": name, **values}))
+    return wait_result(socket, message_id)
+
+
+def main():
+    code = getpass.getpass("Eufy verification code: ").strip()
+    if not code:
+        raise ValueError("verification code cannot be empty")
+    with connect("ws://127.0.0.1:3001", open_timeout=5, close_timeout=1) as socket:
+        greeting = receive(socket, 5)
+        schema = min(12, int(greeting.get("maxSchemaVersion", 0)))
+        command(socket, "verify-schema", "set_api_schema", schemaVersion=schema)
+        command(socket, "verify-listen", "start_listening")
+        result = command(
+            socket,
+            "verify-code",
+            "driver.set_verify_code",
+            verifyCode=code,
+        )
+    if result is False:
+        raise RuntimeError("verification code was rejected")
+    print("Verification code submitted. The panel should connect shortly.")
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except (OSError, TimeoutError, ValueError, RuntimeError, json.JSONDecodeError) as exc:
+        print(f"Could not verify Eufy sign-in: {exc}", file=sys.stderr)
+        raise SystemExit(1)

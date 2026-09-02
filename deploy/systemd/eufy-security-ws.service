@@ -1,0 +1,19 @@
+[Unit]
+Description=Private Eufy Security WebSocket bridge
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Restart=on-failure
+RestartSec=5
+TimeoutStartSec=60
+TimeoutStopSec=45
+ExecStartPre=-/usr/bin/docker rm -f eufy-security-ws
+ExecStart=/usr/bin/docker run --name eufy-security-ws --rm --network bridge --publish 127.0.0.1:3001:3000 --env-file /etc/eufy-security-ws.env --mount type=bind,src=/etc/eufy-security-ws/username,dst=/run/secrets/eufy_username,readonly --mount type=bind,src=/etc/eufy-security-ws/password,dst=/run/secrets/eufy_password,readonly --volume /var/lib/eufy-security-ws:/data --security-opt no-new-privileges --cap-drop ALL --log-driver journald bropat/eufy-security-ws@sha256:d41169205f4e20e1e7e173283aaf8bb2d68e2abecb42bc1500a5fac5bb7a8750
+ExecStop=/usr/bin/docker stop -t 20 eufy-security-ws
+ExecStopPost=-/usr/bin/docker rm -f eufy-security-ws
+
+[Install]
+WantedBy=multi-user.target
