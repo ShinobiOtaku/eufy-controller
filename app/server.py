@@ -365,6 +365,16 @@ class PanelHandler(BaseHTTPRequestHandler):
             **state,
         }
 
+    def _homepage_payload(self) -> dict:
+        state = PROVIDER.status()
+        mode = state.get("mode", "unknown")
+        return {
+            "ok": mode in ALLOWED_MODES,
+            "mode": mode if mode in ALLOWED_MODES else "unknown",
+            "connected": bool(state.get("connected", False)),
+            "provider": PROVIDER.label,
+        }
+
     def _serve_static(self, relative_path: str) -> None:
         clean = relative_path.strip("/") or "index.html"
         if clean not in {"index.html", "app.css", "app.js", "favicon.svg"}:
@@ -393,6 +403,20 @@ class PanelHandler(BaseHTTPRequestHandler):
                 HTTPStatus.OK,
                 {"ok": True, "provider": PROVIDER.label, "live": PROVIDER.live},
             )
+            return
+        if path == "/api/homepage":
+            try:
+                self._json(HTTPStatus.OK, self._homepage_payload())
+            except ProviderError:
+                self._json(
+                    HTTPStatus.OK,
+                    {
+                        "ok": False,
+                        "mode": "unknown",
+                        "connected": False,
+                        "provider": PROVIDER.label,
+                    },
+                )
             return
         if path == "/api/status":
             _, session, set_cookie = self._session()

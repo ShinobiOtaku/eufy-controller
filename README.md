@@ -21,6 +21,7 @@ root-owned files on the Pi and are consumed by the community
 - Automatically selects a single S380/T8030 HomeBase
 - Supports an explicit HomeBase serial when an account has multiple stations
 - Keeps the panel and bridge bound to localhost
+- Provides a session-free read-only endpoint for a Homepage status widget
 - Uses a CSRF token for mode-changing requests
 - Starts in a non-operational demo mode until credentials are configured
 - Does not require Home Assistant
@@ -91,7 +92,8 @@ sudo systemctl reload nginx
 
 Adjust the public hostname in
 [`deploy/homepage/services.example.yaml`](deploy/homepage/services.example.yaml),
-then merge that service into Homepage's `services.yaml`.
+then merge that service into Homepage's `services.yaml`. The widget refreshes
+every 10 seconds and displays `Schedule`, `Armed`, or `Unavailable`.
 
 ### Select the country
 

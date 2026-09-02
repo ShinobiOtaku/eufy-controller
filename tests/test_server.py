@@ -36,6 +36,16 @@ class PanelTests(unittest.TestCase):
         self.assertEqual(state["mode"], "away")
         self.assertTrue(state["pending"])
 
+    def test_homepage_payload_is_minimal_and_session_free(self):
+        server.PROVIDER.set_mode("schedule")
+        handler = server.PanelHandler.__new__(server.PanelHandler)
+        payload = handler._homepage_payload()
+        self.assertEqual(
+            set(payload), {"ok", "mode", "connected", "provider"}
+        )
+        self.assertEqual(payload["mode"], "schedule")
+        self.assertTrue(payload["connected"])
+
 
 if __name__ == "__main__":
     unittest.main()
