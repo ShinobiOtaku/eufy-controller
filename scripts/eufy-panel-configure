@@ -1,0 +1,55 @@
+#!/bin/sh
+set -eu
+
+if [ "$(id -u)" -ne 0 ]; then
+    echo "Run this helper with sudo: sudo eufy-panel-configure" >&2
+    exit 1
+fi
+
+eufy_password=''
+account_tmp=''
+password_tmp=''
+cleanup() {
+    stty echo 2>/dev/null || true
+    [ -z "$account_tmp" ] || rm -f "$account_tmp"
+    [ -z "$password_tmp" ] || rm -f "$password_tmp"
+    unset eufy_password
+}
+trap cleanup EXIT
+trap 'exit 1' HUP INT TERM
+
+printf "Eufy account email: "
+IFS= read -r eufy_account
+if [ -z "$eufy_account" ]; then
+    echo "Email cannot be empty." >&2
+    exit 1
+fi
+
+printf "Eufy account password: "
+stty -echo
+IFS= read -r eufy_password
+stty echo
+printf "\n"
+if [ -z "$eufy_password" ]; then
+    echo "Password cannot be empty." >&2
+    exit 1
+fi
+
+install -d -o root -g root -m 0700 /etc/eufy-security-ws
+account_tmp="$(mktemp /etc/eufy-security-ws/username.XXXXXX)"
+password_tmp="$(mktemp /etc/eufy-security-ws/password.XXXXXX)"
+printf '%s' "$eufy_account" > "$account_tmp"
+printf '%s' "$eufy_password" > "$password_tmp"
+install -o root -g root -m 0600 "$account_tmp" /etc/eufy-security-ws/username
+install -o root -g root -m 0600 "$password_tmp" /etc/eufy-security-ws/password
+rm -f "$account_tmp" "$password_tmp"
+account_tmp=''
+password_tmp=''
+unset eufy_password
+
+systemctl enable --now eufy-security-ws.service
+sed -i 's/^PANEL_PROVIDER=.*/PANEL_PROVIDER=eufy_ws/' /etc/eufy-panel.env
+systemctl restart eufy-panel.service
+
+echo "Eufy sign-in started. Open your configured panel URL."
+echo "If it asks for a verification code, run: sudo eufy-panel-verify"
