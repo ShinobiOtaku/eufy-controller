@@ -3,3 +3,11 @@
         icon: mdi-shield-home
         href: http://homepage.example/eufy/
         description: Schedule and Away control
+        widget:
+          type: customapi
+          url: http://127.0.0.1:8765/api/homepage
+          refreshInterval: 10000
+          mappings:
+            - field: status
+              label: Status
+              format: text

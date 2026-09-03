@@ -28,6 +28,7 @@ class PanelTests(unittest.TestCase):
         provider = server.EufyWsProvider.__new__(server.EufyWsProvider)
         state = provider._station_state({"guardMode": 2, "currentMode": 1})
         self.assertEqual(state["mode"], "schedule")
+        self.assertEqual(state["active_mode"], "Home")
         self.assertFalse(state["pending"])
 
     def test_away_can_be_pending_during_exit_delay(self):
@@ -35,6 +36,31 @@ class PanelTests(unittest.TestCase):
         state = provider._station_state({"guardMode": 0, "currentMode": 1})
         self.assertEqual(state["mode"], "away")
         self.assertTrue(state["pending"])
+
+    def test_homepage_payload_is_minimal_and_session_free(self):
+        server.PROVIDER.set_mode("schedule")
+        handler = server.PanelHandler.__new__(server.PanelHandler)
+        payload = handler._homepage_payload()
+        self.assertEqual(
+            set(payload),
+            {"ok", "mode", "status", "active_mode", "connected", "provider"},
+        )
+        self.assertEqual(payload["mode"], "schedule")
+        self.assertTrue(payload["connected"])
+
+    def test_homepage_status_includes_active_schedule_rule(self):
+        status, active = server.homepage_status(
+            {"mode": "schedule", "current_mode": 1}
+        )
+        self.assertEqual(status, "Schedule · Home")
+        self.assertEqual(active, "Home")
+
+    def test_homepage_away_status_is_armed(self):
+        status, active = server.homepage_status(
+            {"mode": "away", "current_mode": 0}
+        )
+        self.assertEqual(status, "Armed")
+        self.assertEqual(active, "Away")
 
 
 if __name__ == "__main__":

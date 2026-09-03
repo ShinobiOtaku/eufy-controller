@@ -33,10 +33,16 @@ before reaching the bridge.
 
 1. `GET /api/status` establishes a short-lived browser session and returns a
    CSRF token.
-2. `POST /api/mode` requires that token and accepts only `schedule` or `away`.
-3. The backend opens a localhost WebSocket connection using API schema 12.
-4. It sends `station.set_guard_mode` to the selected HomeBase.
-5. It reads station properties back and reports the observed state.
+2. `GET /api/homepage` returns only mode, display status, connection, and
+   provider fields for Homepage's server-side widget polling; it does not
+   create a browser session.
+   When Schedule is selected, its compact `status` combines the guard mode and
+   active rule, such as `Schedule · Home`.
+3. `POST /api/mode` requires the browser token and accepts only `schedule` or
+   `away`.
+4. The backend opens a localhost WebSocket connection using API schema 12.
+5. It sends `station.set_guard_mode` to the selected HomeBase.
+6. It reads station properties back and reports the observed state.
 
 ## HomeBase selection
 
