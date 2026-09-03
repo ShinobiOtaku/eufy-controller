@@ -142,6 +142,12 @@ h1 { margin: 0; font-size: clamp(1.35rem, 3vw, 2rem); letter-spacing: -0.03em; }
 .status-copy h2 { margin: 4px 0 8px; font-size: clamp(2.2rem, 7vw, 4.6rem); line-height: 0.98; letter-spacing: -0.055em; }
 .status-copy > p:not(.status-kicker) { margin: 0; }
 #mode-description { color: #b8c5d4; font-size: clamp(1rem, 2.2vw, 1.2rem); }
+#mode-description.active-rule {
+  color: #70e6ae;
+  font-size: clamp(1.08rem, 2.4vw, 1.32rem);
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
 .confirmed { margin-top: 14px !important; color: var(--muted); font-size: 0.78rem; }
 
 .controls {

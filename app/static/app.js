@@ -46,13 +46,15 @@
   function renderMode(mode, updatedAt, pending = false, activeMode = "") {
     const safeMode = labels[mode] ? mode : "unknown";
     const meta = labels[safeMode];
+    const hasActiveRule = safeMode === "schedule" && activeMode && activeMode !== "Unknown";
     currentMode = safeMode;
     elements.modeLabel.textContent = pending ? `Switching to ${meta.title.toLowerCase()}…` : meta.title;
     elements.modeDescription.textContent = pending
       ? (safeMode === "away" ? "HomeBase exit delay is running" : "HomeBase is applying the mode")
-      : (safeMode === "schedule" && activeMode && activeMode !== "Unknown"
-        ? `Active schedule mode: ${activeMode}`
+      : (hasActiveRule
+        ? `Active now · ${activeMode}`
         : meta.description);
+    elements.modeDescription.classList.toggle("active-rule", Boolean(hasActiveRule && !pending));
     elements.confirmed.textContent = pending ? "Command accepted; waiting for HomeBase" : relativeTime(updatedAt);
     elements.shield.className = `shield ${safeMode}`;
     elements.shieldGlyph.setAttribute("d", meta.glyph);
