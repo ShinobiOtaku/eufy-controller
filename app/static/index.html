@@ -3,25 +3,69 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-    <meta name="theme-color" content="#08111f">
+    <meta name="theme-color" content="#07131f">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="robots" content="noindex, nofollow">
-    <title>Eufy security panel</title>
+    <title>Front door dashboard</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="app.css">
     <script src="app.js" defer></script>
   </head>
   <body>
+    <svg class="icon-library" aria-hidden="true">
+      <symbol id="weather-clear" viewBox="0 0 96 96">
+        <circle cx="48" cy="48" r="18"/>
+        <path d="M48 7v12M48 77v12M7 48h12M77 48h12M19 19l9 9M68 68l9 9M77 19l-9 9M28 68l-9 9"/>
+      </symbol>
+      <symbol id="weather-clear-night" viewBox="0 0 96 96">
+        <path d="M72 65A34 34 0 0 1 31 20a34 34 0 1 0 41 45Z"/>
+        <path d="m69 18 2 6 6 2-6 2-2 6-2-6-6-2 6-2 2-6Zm14 23 1.4 4.1L89 47l-4.6 1.5L83 53l-1.5-4.5L77 47l4.5-1.9L83 41Z" class="filled"/>
+      </symbol>
+      <symbol id="weather-partly-cloudy" viewBox="0 0 96 96">
+        <circle cx="36" cy="34" r="15"/>
+        <path d="M36 8v8M14 34H6m8.5-20L20 20m32-6-5.5 6"/>
+        <path d="M25 72h46a15 15 0 0 0-2-29.8 22 22 0 0 0-41.7 7.1A11.5 11.5 0 0 0 25 72Z" class="cloud"/>
+      </symbol>
+      <symbol id="weather-partly-cloudy-night" viewBox="0 0 96 96">
+        <path d="M52 36A23 23 0 0 1 31 8a23 23 0 1 0 30 28Z"/>
+        <path d="M25 72h46a15 15 0 0 0-2-29.8 22 22 0 0 0-41.7 7.1A11.5 11.5 0 0 0 25 72Z" class="cloud"/>
+      </symbol>
+      <symbol id="weather-cloudy" viewBox="0 0 96 96">
+        <path d="M20 72h54a16 16 0 0 0-2-31.9A26 26 0 0 0 22.7 49 12 12 0 0 0 20 72Z" class="cloud"/>
+      </symbol>
+      <symbol id="weather-rain" viewBox="0 0 96 96">
+        <path d="M20 58h54a16 16 0 0 0-2-31.9A26 26 0 0 0 22.7 35 12 12 0 0 0 20 58Z" class="cloud"/>
+        <path d="m29 70-5 10m26-10-5 10m26-10-5 10"/>
+      </symbol>
+      <symbol id="weather-showers" viewBox="0 0 96 96">
+        <path d="M20 58h54a16 16 0 0 0-2-31.9A26 26 0 0 0 22.7 35 12 12 0 0 0 20 58Z" class="cloud"/>
+        <path d="m29 68-5 10m26-10-5 10m26-10-5 10"/>
+      </symbol>
+      <symbol id="weather-storm" viewBox="0 0 96 96">
+        <path d="M20 56h54a16 16 0 0 0-2-31.9A26 26 0 0 0 22.7 33 12 12 0 0 0 20 56Z" class="cloud"/>
+        <path d="m49 61-10 17h10l-5 13 18-22H51l6-8Z" class="bolt"/>
+      </symbol>
+      <symbol id="weather-snow" viewBox="0 0 96 96">
+        <path d="M20 53h54a16 16 0 0 0-2-31.9A26 26 0 0 0 22.7 30 12 12 0 0 0 20 53Z" class="cloud"/>
+        <path d="M28 66v18m-8-14 16 10m0-10-16 10m30-14v18m-8-14 16 10m0-10-16 10m30-14v18m-8-14 16 10m0-10-16 10"/>
+      </symbol>
+      <symbol id="weather-fog" viewBox="0 0 96 96">
+        <path d="M20 50h54a16 16 0 0 0-2-31.9A26 26 0 0 0 22.7 27 12 12 0 0 0 20 50Z" class="cloud"/>
+        <path d="M17 65h62M25 79h46"/>
+      </symbol>
+      <symbol id="weather-unknown" viewBox="0 0 96 96">
+        <circle cx="48" cy="48" r="35"/><path d="M38 38a11 11 0 1 1 14 10c-4 1.5-4 5-4 8m0 12v1"/>
+      </symbol>
+    </svg>
+
     <main class="shell" aria-labelledby="page-title">
       <header class="topbar">
-        <div class="brand-mark" aria-hidden="true">
-          <svg viewBox="0 0 48 48" role="img">
-            <path d="M24 4 41 11v12c0 10.7-6.8 18.1-17 22C13.8 41.1 7 33.7 7 23V11L24 4Z"/>
-            <path class="brand-mark-cut" d="m17.5 24.4 4.1 4.1 9.3-10"/>
-          </svg>
-        </div>
-        <div>
-          <p class="eyebrow">FRONT DOOR</p>
-          <h1 id="page-title">Home security</h1>
+        <div class="clock-block">
+          <p class="eyebrow" id="page-title">FRONT DOOR</p>
+          <time class="clock" id="clock">--:--</time>
+          <p class="date" id="date">Loading date…</p>
         </div>
         <div class="connection" id="connection" aria-live="polite">
           <span class="connection-dot"></span>
@@ -29,51 +73,86 @@
         </div>
       </header>
 
-      <aside class="demo-banner" id="demo-banner" hidden>
-        <span>POC DEMO</span>
-        No camera commands are being sent
-      </aside>
-
-      <section class="status-card" aria-labelledby="mode-label">
-        <div class="shield" id="shield" aria-hidden="true">
-          <svg viewBox="0 0 64 72">
-            <path d="M32 3 58 13v20c0 17-10.6 29.2-26 35C16.6 62.2 6 50 6 33V13L32 3Z"/>
-            <path class="shield-glyph" id="shield-glyph" d="M22 36.5 29 43l14-16"/>
+      <section class="weather-card" id="weather-card" aria-labelledby="weather-title" aria-live="polite">
+        <div class="weather-main">
+          <div class="weather-copy">
+            <p class="card-label" id="weather-location">LOCAL WEATHER</p>
+            <div class="temperature-row">
+              <span class="temperature" id="temperature">--°</span>
+              <div>
+                <h1 id="weather-title">Checking weather…</h1>
+                <p class="feels" id="feels-like">One moment</p>
+              </div>
+            </div>
+          </div>
+          <svg class="weather-icon" id="weather-icon" viewBox="0 0 96 96" role="img" aria-label="Weather conditions">
+            <use href="#weather-unknown"></use>
           </svg>
         </div>
-        <div class="status-copy">
-          <p class="status-kicker">CURRENT MODE</p>
-          <h2 id="mode-label">Checking…</h2>
-          <p id="mode-description">Contacting the local panel</p>
-          <p class="confirmed" id="confirmed">Waiting for confirmation</p>
+
+        <div class="rain-banner" id="rain-banner">
+          <span class="rain-symbol" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 2S5.5 9.1 5.5 14.2a6.5 6.5 0 0 0 13 0C18.5 9.1 12 2 12 2Z"/></svg>
+          </span>
+          <div>
+            <strong id="rain-headline">Checking the rain forecast</strong>
+            <span id="rain-detail">Looking at the next six hours</span>
+          </div>
+        </div>
+
+        <div class="weather-stats" aria-label="Today's weather details">
+          <div><span>HIGH / LOW</span><strong id="high-low">--° / --°</strong></div>
+          <div><span>RAIN TODAY</span><strong id="rain-today">--%</strong></div>
+          <div><span>WIND</span><strong id="wind-speed">-- km/h</strong></div>
+        </div>
+
+        <div class="weather-setup" id="weather-setup" hidden>
+          <strong>Weather needs a location</strong>
+          <span>Set <code>WEATHER_LOCATION</code> in <code>/etc/eufy-panel.env</code></span>
         </div>
       </section>
 
-      <section class="controls" aria-label="Security modes">
-        <button class="mode-button schedule" type="button" data-mode="schedule">
-          <span class="button-icon" aria-hidden="true">
-            <svg viewBox="0 0 32 32"><rect x="4" y="6" width="24" height="22" rx="4"/><path class="line" d="M9 3v6m14-6v6M4 12h24m-12 5v6l4 2"/></svg>
-          </span>
-          <span class="button-title">Schedule</span>
-          <span class="button-detail">Follow timetable</span>
-        </button>
+      <aside class="demo-banner" id="demo-banner" hidden>
+        <span>DEMO</span> No camera commands are being sent
+      </aside>
 
-        <button class="mode-button away" type="button" data-mode="away">
-          <span class="button-icon" aria-hidden="true">
-            <svg viewBox="0 0 32 32"><path d="M16 3 28 8v8.5C28 24 23.3 29 16 31 8.7 29 4 24 4 16.5V8l12-5Z"/><path class="line" d="M11 17.2 14.5 21l7-8"/></svg>
-          </span>
-          <span class="button-title">Away</span>
-          <span class="button-detail">Full monitoring</span>
-        </button>
+      <section class="security-card" aria-labelledby="security-title">
+        <div class="security-heading">
+          <div>
+            <p class="card-label">HOME SECURITY</p>
+            <h2 id="security-title">Eufy HomeBase</h2>
+          </div>
+          <div class="mode-status unknown" id="mode-status">
+            <svg viewBox="0 0 32 36" aria-hidden="true"><path d="M16 2 29 7v10c0 8.5-5.3 14.6-13 17.5C8.3 31.6 3 25.5 3 17V7l13-5Z"/><path class="shield-line" d="m11 18.2 3.5 3.5 7-8"/></svg>
+            <div>
+              <span id="mode-label">Checking…</span>
+              <strong id="mode-description">Contacting HomeBase</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="controls" aria-label="Security modes">
+          <button class="mode-button schedule" type="button" data-mode="schedule">
+            <span class="button-icon" aria-hidden="true">
+              <svg viewBox="0 0 32 32"><rect x="4" y="6" width="24" height="22" rx="4"/><path class="line" d="M9 3v6m14-6v6M4 12h24m-12 5v6l4 2"/></svg>
+            </span>
+            <span><strong>Schedule</strong><small>I'm home</small></span>
+          </button>
+          <button class="mode-button away" type="button" data-mode="away">
+            <span class="button-icon" aria-hidden="true">
+              <svg viewBox="0 0 32 32"><path d="M16 3 28 8v8.5C28 24 23.3 29 16 31 8.7 29 4 24 4 16.5V8l12-5Z"/><path class="line" d="M11 17.2 14.5 21l7-8"/></svg>
+            </span>
+            <span><strong>Away</strong><small>I'm leaving</small></span>
+          </button>
+        </div>
+
+        <p class="message" id="message" role="status" aria-live="polite"></p>
       </section>
 
-      <div class="message" id="message" role="status" aria-live="polite"></div>
-
       <footer>
-        <span id="provider">Local panel</span>
-        <button class="refresh" type="button" id="refresh">Refresh status</button>
+        <a href="https://open-meteo.com/" rel="noopener">Weather by Open-Meteo</a>
+        <button class="refresh" type="button" id="refresh">Refresh</button>
       </footer>
     </main>
-
   </body>
 </html>

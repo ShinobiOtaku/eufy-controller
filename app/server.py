@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Small touchscreen panel for Schedule/Away control of a Eufy HomeBase."""
+"""Front-door dashboard with weather and Eufy Schedule/Away controls."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ import time
 from http import HTTPStatus
 from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib import parse
+from urllib import error, parse, request
 
 
 APP_DIR = Path(__file__).resolve().parent
@@ -25,6 +25,18 @@ HOST = os.getenv("PANEL_HOST", "127.0.0.1")
 PORT = int(os.getenv("PANEL_PORT", "8765"))
 PANEL_NAME = os.getenv("PANEL_NAME", "Home security")
 PROVIDER_NAME = os.getenv("PANEL_PROVIDER", "demo").strip().lower()
+WEATHER_LOCATION = os.getenv("WEATHER_LOCATION", "").strip()
+WEATHER_LOCATION_LABEL = os.getenv("WEATHER_LOCATION_LABEL", "").strip()
+WEATHER_COUNTRY_CODE = os.getenv("WEATHER_COUNTRY_CODE", "").strip().upper()
+WEATHER_LATITUDE = os.getenv("WEATHER_LATITUDE", "").strip()
+WEATHER_LONGITUDE = os.getenv("WEATHER_LONGITUDE", "").strip()
+WEATHER_CACHE_SECONDS = max(300, int(os.getenv("WEATHER_CACHE_SECONDS", "600")))
+WEATHER_API_URL = os.getenv(
+    "WEATHER_API_URL", "https://api.open-meteo.com/v1/forecast"
+).strip()
+WEATHER_GEOCODING_URL = os.getenv(
+    "WEATHER_GEOCODING_URL", "https://geocoding-api.open-meteo.com/v1/search"
+).strip()
 
 ALLOWED_MODES = {"schedule", "away"}
 ACTIVE_MODE_LABELS = {
@@ -64,6 +76,286 @@ def homepage_status(state: dict) -> tuple[str, str]:
 
 class ProviderError(RuntimeError):
     """A safe-to-display provider error."""
+
+
+class WeatherError(RuntimeError):
+    """A safe-to-display weather service error."""
+
+
+def weather_condition(code: object) -> tuple[str, str]:
+    """Map an Open-Meteo WMO weather code to a label and local icon name."""
+    try:
+        value = int(code)
+    except (TypeError, ValueError):
+        return "Conditions unavailable", "unknown"
+    if value == 0:
+        return "Clear", "clear"
+    if value in {1, 2}:
+        return "Partly cloudy", "partly-cloudy"
+    if value == 3:
+        return "Overcast", "cloudy"
+    if value in {45, 48}:
+        return "Foggy", "fog"
+    if value in {51, 53, 55, 56, 57}:
+        return "Drizzle", "rain"
+    if value in {61, 63, 65, 66, 67}:
+        return "Rain", "rain"
+    if value in {71, 73, 75, 77, 85, 86}:
+        return "Snow", "snow"
+    if value in {80, 81, 82}:
+        return "Rain showers", "showers"
+    if value in {95, 96, 99}:
+        return "Thunderstorms", "storm"
+    return "Conditions unavailable", "unknown"
+
+
+def rain_advice(
+    current_code: object, current_precipitation: object, hours: list[dict]
+) -> dict:
+    """Summarise whether rain protection is useful over the next six hours."""
+    try:
+        current_mm = float(current_precipitation or 0)
+    except (TypeError, ValueError):
+        current_mm = 0
+    try:
+        code = int(current_code)
+    except (TypeError, ValueError):
+        code = -1
+
+    wet_codes = set(range(51, 68)) | set(range(80, 83)) | {95, 96, 99}
+    probabilities = []
+    for hour in hours[:6]:
+        try:
+            probability = max(0, min(100, int(hour.get("probability") or 0)))
+        except (TypeError, ValueError):
+            probability = 0
+        probabilities.append(probability)
+
+    maximum = max(probabilities, default=0)
+    normalised_hours = [
+        {**hour, "probability": probability}
+        for hour, probability in zip(hours[:6], probabilities)
+    ]
+    likely = next(
+        (hour for hour in normalised_hours if hour["probability"] >= 60), None
+    )
+    possible = next(
+        (hour for hour in normalised_hours if hour["probability"] >= 40), None
+    )
+
+    if current_mm > 0 or code in wet_codes:
+        return {
+            "headline": "Take an umbrella",
+            "detail": "It's wet outside now",
+            "tone": "wet",
+            "max_probability": maximum,
+        }
+    if likely:
+        return {
+            "headline": "Take an umbrella",
+            "detail": f"Rain likely around {likely['label']}",
+            "tone": "wet",
+            "max_probability": maximum,
+        }
+    if possible:
+        return {
+            "headline": "Rain is possible",
+            "detail": f"Keep an eye on {possible['label']} · {maximum}% chance",
+            "tone": "watch",
+            "max_probability": maximum,
+        }
+    return {
+        "headline": "No umbrella needed",
+        "detail": f"Low rain chance for 6 hours · {maximum}% max",
+        "tone": "dry",
+        "max_probability": maximum,
+    }
+
+
+class WeatherProvider:
+    """Cached, key-free Open-Meteo forecast suitable for a private dashboard."""
+
+    label = "Open-Meteo"
+
+    def __init__(self) -> None:
+        self.location_query = WEATHER_LOCATION
+        self.location_label = WEATHER_LOCATION_LABEL
+        self.country_code = WEATHER_COUNTRY_CODE
+        self.latitude = self._coordinate(WEATHER_LATITUDE, -90, 90, "latitude")
+        self.longitude = self._coordinate(WEATHER_LONGITUDE, -180, 180, "longitude")
+        if (self.latitude is None) != (self.longitude is None):
+            raise RuntimeError("Set both WEATHER_LATITUDE and WEATHER_LONGITUDE")
+        self._resolved_location: tuple[float, float, str] | None = None
+        self._cache: dict | None = None
+        self._cache_time = 0.0
+        self._lock = threading.Lock()
+
+    @staticmethod
+    def _coordinate(value: str, minimum: float, maximum: float, name: str) -> float | None:
+        if not value:
+            return None
+        try:
+            number = float(value)
+        except ValueError as exc:
+            raise RuntimeError(f"WEATHER_{name.upper()} must be a number") from exc
+        if number < minimum or number > maximum:
+            raise RuntimeError(f"WEATHER_{name.upper()} is out of range")
+        return number
+
+    @property
+    def configured(self) -> bool:
+        return self.latitude is not None or bool(self.location_query)
+
+    @staticmethod
+    def _fetch_json(url: str) -> dict:
+        try:
+            http_request = request.Request(
+                url,
+                headers={"User-Agent": "front-door-dashboard/1.0"},
+            )
+            with request.urlopen(http_request, timeout=8) as response:
+                payload = json.load(response)
+            if not isinstance(payload, dict):
+                raise ValueError("unexpected response")
+            return payload
+        except (error.URLError, TimeoutError, OSError, ValueError, json.JSONDecodeError) as exc:
+            LOG.warning("Weather request failed: %s", exc)
+            raise WeatherError("Weather forecast is temporarily unavailable") from exc
+
+    def _location(self) -> tuple[float, float, str]:
+        if self._resolved_location:
+            return self._resolved_location
+        if self.latitude is not None and self.longitude is not None:
+            label = self.location_label or self.location_query or "Local weather"
+            self._resolved_location = (self.latitude, self.longitude, label)
+            return self._resolved_location
+        if not self.location_query:
+            raise WeatherError("Weather location has not been configured")
+
+        parameters = {
+            "name": self.location_query,
+            "count": 1,
+            "language": "en",
+            "format": "json",
+        }
+        if self.country_code:
+            parameters["countryCode"] = self.country_code
+        payload = self._fetch_json(f"{WEATHER_GEOCODING_URL}?{parse.urlencode(parameters)}")
+        results = payload.get("results") or []
+        if not results:
+            raise WeatherError("The configured weather location could not be found")
+        result = results[0]
+        try:
+            latitude = float(result["latitude"])
+            longitude = float(result["longitude"])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise WeatherError("The weather location response was incomplete") from exc
+        label = self.location_label or str(result.get("name") or self.location_query)
+        self._resolved_location = (latitude, longitude, label)
+        return self._resolved_location
+
+    @staticmethod
+    def _hour_label(timestamp: str) -> str:
+        try:
+            hour = int(timestamp[11:13])
+        except (TypeError, ValueError):
+            return "later"
+        if hour == 0:
+            return "midnight"
+        if hour == 12:
+            return "noon"
+        return f"{hour % 12}{'am' if hour < 12 else 'pm'}"
+
+    def _normalise(self, payload: dict, location: str) -> dict:
+        current = payload.get("current") or {}
+        hourly = payload.get("hourly") or {}
+        daily = payload.get("daily") or {}
+        current_time = str(current.get("time") or "")
+        times = hourly.get("time") or []
+        probabilities = hourly.get("precipitation_probability") or []
+        precipitation = hourly.get("precipitation") or []
+        hours = []
+        for index, timestamp in enumerate(times):
+            if current_time and str(timestamp) < current_time[:13] + ":00":
+                continue
+            hours.append(
+                {
+                    "time": str(timestamp),
+                    "label": self._hour_label(str(timestamp)),
+                    "probability": probabilities[index] if index < len(probabilities) else 0,
+                    "precipitation": precipitation[index] if index < len(precipitation) else 0,
+                }
+            )
+            if len(hours) == 6:
+                break
+
+        condition, icon = weather_condition(current.get("weather_code"))
+        advice = rain_advice(
+            current.get("weather_code"), current.get("precipitation"), hours
+        )
+
+        def first(values: object) -> object:
+            return values[0] if isinstance(values, list) and values else None
+
+        return {
+            "ok": True,
+            "configured": True,
+            "location": location,
+            "temperature": current.get("temperature_2m"),
+            "feels_like": current.get("apparent_temperature"),
+            "wind_speed": current.get("wind_speed_10m"),
+            "condition": condition,
+            "icon": icon,
+            "is_day": bool(current.get("is_day", 1)),
+            "high": first(daily.get("temperature_2m_max")),
+            "low": first(daily.get("temperature_2m_min")),
+            "daily_rain_probability": first(daily.get("precipitation_probability_max")),
+            "rain": advice,
+            "observed_at": current_time,
+            "updated_at": int(time.time()),
+            "source": self.label,
+            "stale": False,
+        }
+
+    def _refresh(self) -> dict:
+        latitude, longitude, location = self._location()
+        parameters = {
+            "latitude": latitude,
+            "longitude": longitude,
+            "current": ",".join(
+                [
+                    "temperature_2m",
+                    "apparent_temperature",
+                    "precipitation",
+                    "weather_code",
+                    "is_day",
+                    "wind_speed_10m",
+                ]
+            ),
+            "hourly": "precipitation_probability,precipitation",
+            "daily": "temperature_2m_max,temperature_2m_min,precipitation_probability_max",
+            "timezone": "auto",
+            "forecast_days": 2,
+        }
+        payload = self._fetch_json(f"{WEATHER_API_URL}?{parse.urlencode(parameters)}")
+        return self._normalise(payload, location)
+
+    def status(self, force: bool = False) -> dict:
+        if not self.configured:
+            raise WeatherError("Weather location has not been configured")
+        with self._lock:
+            age = time.monotonic() - self._cache_time
+            if not force and self._cache and age < WEATHER_CACHE_SECONDS:
+                return dict(self._cache)
+            try:
+                forecast = self._refresh()
+            except WeatherError:
+                if self._cache:
+                    return {**self._cache, "stale": True}
+                raise
+            self._cache = forecast
+            self._cache_time = time.monotonic()
+            return dict(forecast)
 
 
 class DemoProvider:
@@ -315,6 +607,7 @@ def make_provider():
 
 
 PROVIDER = make_provider()
+WEATHER_PROVIDER = WeatherProvider()
 SESSIONS: dict[str, dict] = {}
 SESSIONS_LOCK = threading.Lock()
 
@@ -326,7 +619,7 @@ def prune_sessions(now: float) -> None:
 
 
 class PanelHandler(BaseHTTPRequestHandler):
-    server_version = "EufyPanel/0.1"
+    server_version = "FrontDoorDashboard/1.0"
 
     def log_message(self, fmt: str, *args) -> None:
         LOG.info("%s %s", self.address_string(), fmt % args)
@@ -445,6 +738,22 @@ class PanelHandler(BaseHTTPRequestHandler):
                         "active_mode": "Unknown",
                         "connected": False,
                         "provider": PROVIDER.label,
+                    },
+                )
+            return
+        if path == "/api/weather":
+            query = parse.parse_qs(parse.urlparse(self.path).query)
+            force = query.get("refresh") == ["1"]
+            try:
+                self._json(HTTPStatus.OK, WEATHER_PROVIDER.status(force=force))
+            except WeatherError as exc:
+                self._json(
+                    HTTPStatus.SERVICE_UNAVAILABLE,
+                    {
+                        "ok": False,
+                        "configured": WEATHER_PROVIDER.configured,
+                        "error": str(exc),
+                        "source": WEATHER_PROVIDER.label,
                     },
                 )
             return
