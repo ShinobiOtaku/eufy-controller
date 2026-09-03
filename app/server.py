@@ -52,7 +52,9 @@ def homepage_status(state: dict) -> tuple[str, str]:
         current_mode = int(state.get("current_mode", -1))
     except (TypeError, ValueError):
         current_mode = -1
-    active_mode = ACTIVE_MODE_LABELS.get(current_mode, "Unknown")
+    active_mode = str(
+        state.get("active_mode") or ACTIVE_MODE_LABELS.get(current_mode, "Unknown")
+    )
     if mode == "schedule":
         return f"Schedule · {active_mode}", active_mode
     if mode == "away":
@@ -237,8 +239,8 @@ class EufyWsProvider:
             "mode": self.VALUE_TO_MODE.get(displayed, "unknown"),
             "pending": pending,
             "current_mode": current,
+            "active_mode": ACTIVE_MODE_LABELS.get(current, "Unknown"),
             "guard_mode": guard,
-            "station_serial": station.get("serialNumber", ""),
             "updated_at": int(time.time()),
             "connected": bool(station.get("connected", True)),
         }

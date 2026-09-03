@@ -18,6 +18,7 @@ root-owned files on the Pi and are consumed by the community
 - One-touch **Schedule** and **Away** controls
 - Reads the HomeBase state back before reporting success
 - Understands Schedule's active-rule behaviour (`guardMode=2`)
+- Shows the active schedule rule on both the panel page and Homepage tile
 - Automatically selects a single S380/T8030 HomeBase
 - Supports an explicit HomeBase serial when an account has multiple stations
 - Keeps the panel and bridge bound to localhost

@@ -28,6 +28,7 @@ class PanelTests(unittest.TestCase):
         provider = server.EufyWsProvider.__new__(server.EufyWsProvider)
         state = provider._station_state({"guardMode": 2, "currentMode": 1})
         self.assertEqual(state["mode"], "schedule")
+        self.assertEqual(state["active_mode"], "Home")
         self.assertFalse(state["pending"])
 
     def test_away_can_be_pending_during_exit_delay(self):

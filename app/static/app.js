@@ -43,14 +43,16 @@
     elements.connectionLabel.textContent = label;
   }
 
-  function renderMode(mode, updatedAt, pending = false) {
+  function renderMode(mode, updatedAt, pending = false, activeMode = "") {
     const safeMode = labels[mode] ? mode : "unknown";
     const meta = labels[safeMode];
     currentMode = safeMode;
     elements.modeLabel.textContent = pending ? `Switching to ${meta.title.toLowerCase()}…` : meta.title;
     elements.modeDescription.textContent = pending
       ? (safeMode === "away" ? "HomeBase exit delay is running" : "HomeBase is applying the mode")
-      : meta.description;
+      : (safeMode === "schedule" && activeMode && activeMode !== "Unknown"
+        ? `Active schedule mode: ${activeMode}`
+        : meta.description);
     elements.confirmed.textContent = pending ? "Command accepted; waiting for HomeBase" : relativeTime(updatedAt);
     elements.shield.className = `shield ${safeMode}`;
     elements.shieldGlyph.setAttribute("d", meta.glyph);
@@ -89,7 +91,7 @@
       elements.provider.textContent = data.provider || "Local panel";
       elements.demoBanner.hidden = data.live !== false;
       if (!response.ok || !data.ok) throw new Error(data.error || "Unable to read security mode");
-      renderMode(data.mode, data.updated_at, Boolean(data.pending));
+      renderMode(data.mode, data.updated_at, Boolean(data.pending), data.active_mode);
       setConnection(Boolean(data.connected), data.connected ? "Panel online" : "Provider offline");
       if (!quiet) showMessage("Status confirmed", "success");
     } catch (error) {
@@ -116,7 +118,7 @@
         error.status = response.status;
         throw error;
       }
-      renderMode(data.mode, data.updated_at, Boolean(data.pending));
+      renderMode(data.mode, data.updated_at, Boolean(data.pending), data.active_mode);
       setConnection(Boolean(data.connected));
       showMessage(
         data.pending
