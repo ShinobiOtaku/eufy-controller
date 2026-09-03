@@ -41,10 +41,25 @@ class PanelTests(unittest.TestCase):
         handler = server.PanelHandler.__new__(server.PanelHandler)
         payload = handler._homepage_payload()
         self.assertEqual(
-            set(payload), {"ok", "mode", "connected", "provider"}
+            set(payload),
+            {"ok", "mode", "status", "active_mode", "connected", "provider"},
         )
         self.assertEqual(payload["mode"], "schedule")
         self.assertTrue(payload["connected"])
+
+    def test_homepage_status_includes_active_schedule_rule(self):
+        status, active = server.homepage_status(
+            {"mode": "schedule", "current_mode": 1}
+        )
+        self.assertEqual(status, "Schedule · Home")
+        self.assertEqual(active, "Home")
+
+    def test_homepage_away_status_is_armed(self):
+        status, active = server.homepage_status(
+            {"mode": "away", "current_mode": 0}
+        )
+        self.assertEqual(status, "Armed")
+        self.assertEqual(active, "Away")
 
 
 if __name__ == "__main__":

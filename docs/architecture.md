@@ -33,8 +33,11 @@ before reaching the bridge.
 
 1. `GET /api/status` establishes a short-lived browser session and returns a
    CSRF token.
-2. `GET /api/homepage` returns only mode, connection, and provider fields for
-   Homepage's server-side widget polling; it does not create a browser session.
+2. `GET /api/homepage` returns only mode, display status, connection, and
+   provider fields for Homepage's server-side widget polling; it does not
+   create a browser session.
+   When Schedule is selected, its compact `status` combines the guard mode and
+   active rule, such as `Schedule · Home`.
 3. `POST /api/mode` requires the browser token and accepts only `schedule` or
    `away`.
 4. The backend opens a localhost WebSocket connection using API schema 12.

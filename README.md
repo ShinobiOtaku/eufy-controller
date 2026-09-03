@@ -93,7 +93,8 @@ sudo systemctl reload nginx
 Adjust the public hostname in
 [`deploy/homepage/services.example.yaml`](deploy/homepage/services.example.yaml),
 then merge that service into Homepage's `services.yaml`. The widget refreshes
-every 10 seconds and displays `Schedule`, `Armed`, or `Unavailable`.
+every 10 seconds and displays `Schedule · Home`, `Schedule · Away`, `Armed`, or
+`Unavailable`, depending on the selected guard mode and active schedule rule.
 
 ### Select the country
 

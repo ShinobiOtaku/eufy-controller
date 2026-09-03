@@ -27,6 +27,14 @@ PANEL_NAME = os.getenv("PANEL_NAME", "Home security")
 PROVIDER_NAME = os.getenv("PANEL_PROVIDER", "demo").strip().lower()
 
 ALLOWED_MODES = {"schedule", "away"}
+ACTIVE_MODE_LABELS = {
+    0: "Away",
+    1: "Home",
+    3: "Custom 1",
+    4: "Custom 2",
+    5: "Custom 3",
+    63: "Disarmed",
+}
 SESSION_COOKIE = "eufy_panel_session"
 SESSION_TTL_SECONDS = 12 * 60 * 60
 
@@ -35,6 +43,21 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(message)s",
 )
 LOG = logging.getLogger("eufy-panel")
+
+
+def homepage_status(state: dict) -> tuple[str, str]:
+    """Return a compact tile status and the active schedule rule."""
+    mode = state.get("mode", "unknown")
+    try:
+        current_mode = int(state.get("current_mode", -1))
+    except (TypeError, ValueError):
+        current_mode = -1
+    active_mode = ACTIVE_MODE_LABELS.get(current_mode, "Unknown")
+    if mode == "schedule":
+        return f"Schedule · {active_mode}", active_mode
+    if mode == "away":
+        return "Armed", "Away"
+    return "Unavailable", active_mode
 
 
 class ProviderError(RuntimeError):
@@ -368,9 +391,12 @@ class PanelHandler(BaseHTTPRequestHandler):
     def _homepage_payload(self) -> dict:
         state = PROVIDER.status()
         mode = state.get("mode", "unknown")
+        status, active_mode = homepage_status(state)
         return {
             "ok": mode in ALLOWED_MODES,
             "mode": mode if mode in ALLOWED_MODES else "unknown",
+            "status": status,
+            "active_mode": active_mode,
             "connected": bool(state.get("connected", False)),
             "provider": PROVIDER.label,
         }
@@ -413,6 +439,8 @@ class PanelHandler(BaseHTTPRequestHandler):
                     {
                         "ok": False,
                         "mode": "unknown",
+                        "status": "Unavailable",
+                        "active_mode": "Unknown",
                         "connected": False,
                         "provider": PROVIDER.label,
                     },
