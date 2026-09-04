@@ -8,6 +8,7 @@ import json
 import logging
 import mimetypes
 import os
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 import secrets
 import threading
@@ -16,6 +17,7 @@ from http import HTTPStatus
 from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib import error, parse, request
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 
 APP_DIR = Path(__file__).resolve().parent
@@ -37,6 +39,27 @@ WEATHER_API_URL = os.getenv(
 WEATHER_GEOCODING_URL = os.getenv(
     "WEATHER_GEOCODING_URL", "https://geocoding-api.open-meteo.com/v1/search"
 ).strip()
+BIN_COLLECTION_ANCHOR = date.fromisoformat(
+    os.getenv("BIN_COLLECTION_ANCHOR", "2026-09-10").strip()
+)
+BIN_COLLECTION_ANCHOR_TYPE = os.getenv(
+    "BIN_COLLECTION_ANCHOR_TYPE", "black"
+).strip().lower()
+if BIN_COLLECTION_ANCHOR_TYPE not in {"black", "blue-green"}:
+    raise ValueError("BIN_COLLECTION_ANCHOR_TYPE must be black or blue-green")
+BIN_TIMEZONE_NAME = os.getenv("BIN_TIMEZONE", "Europe/London").strip()
+try:
+    BIN_TIMEZONE = ZoneInfo(BIN_TIMEZONE_NAME)
+except ZoneInfoNotFoundError:
+    if BIN_TIMEZONE_NAME not in {"UTC", "Etc/UTC"}:
+        raise
+    BIN_TIMEZONE = timezone.utc
+BIN_REMINDER_START_HOUR = max(
+    0, min(23, int(os.getenv("BIN_REMINDER_START_HOUR", "12")))
+)
+BIN_REMINDER_END_HOUR = max(
+    0, min(23, int(os.getenv("BIN_REMINDER_END_HOUR", "12")))
+)
 
 ALLOWED_MODES = {"schedule", "away"}
 ACTIVE_MODE_LABELS = {
@@ -72,6 +95,51 @@ def homepage_status(state: dict) -> tuple[str, str]:
     if mode == "away":
         return "Armed", "Away"
     return "Unavailable", active_mode
+
+
+def bin_reminder(now: datetime | None = None) -> dict:
+    """Return the collection reminder for Wednesday afternoon/Thursday morning."""
+    current = now or datetime.now(BIN_TIMEZONE)
+    if current.tzinfo is None:
+        current = current.replace(tzinfo=BIN_TIMEZONE)
+    else:
+        current = current.astimezone(BIN_TIMEZONE)
+
+    collection_date = None
+    phase = ""
+    if current.weekday() == 2 and current.hour >= BIN_REMINDER_START_HOUR:
+        collection_date = current.date() + timedelta(days=1)
+        phase = "tonight"
+    elif current.weekday() == 3 and current.hour < BIN_REMINDER_END_HOUR:
+        collection_date = current.date()
+        phase = "morning"
+
+    if collection_date is None:
+        return {"ok": True, "visible": False}
+
+    weeks_from_anchor = (collection_date - BIN_COLLECTION_ANCHOR).days // 7
+    collection_type = BIN_COLLECTION_ANCHOR_TYPE
+    if weeks_from_anchor % 2:
+        collection_type = (
+            "blue-green" if BIN_COLLECTION_ANCHOR_TYPE == "black" else "black"
+        )
+
+    if collection_type == "black":
+        bins = ["Black bin", "Food caddy"]
+        image = "bins-black.png"
+    else:
+        bins = ["Green bin", "Blue bin", "Food caddy"]
+        image = "bins-blue-green.png"
+
+    return {
+        "ok": True,
+        "visible": True,
+        "phase": phase,
+        "collection_date": collection_date.isoformat(),
+        "collection_type": collection_type,
+        "bins": bins,
+        "image": image,
+    }
 
 
 class ProviderError(RuntimeError):
@@ -698,7 +766,14 @@ class PanelHandler(BaseHTTPRequestHandler):
 
     def _serve_static(self, relative_path: str) -> None:
         clean = relative_path.strip("/") or "index.html"
-        if clean not in {"index.html", "app.css", "app.js", "favicon.svg"}:
+        if clean not in {
+            "index.html",
+            "app.css",
+            "app.js",
+            "favicon.svg",
+            "bins-black.png",
+            "bins-blue-green.png",
+        }:
             self._error(HTTPStatus.NOT_FOUND, "Not found")
             return
         path = STATIC_DIR / clean
@@ -756,6 +831,9 @@ class PanelHandler(BaseHTTPRequestHandler):
                         "source": WEATHER_PROVIDER.label,
                     },
                 )
+            return
+        if path == "/api/bins":
+            self._json(HTTPStatus.OK, bin_reminder())
             return
         if path == "/api/status":
             _, session, set_cookie = self._session()

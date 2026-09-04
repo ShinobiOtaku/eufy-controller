@@ -1,9 +1,10 @@
 # Front-Door Dashboard
 
 A small, locally hosted dashboard for the phone or touchscreen beside the front
-door. It puts the time, today's weather, a six-hour rain heads-up, and Eufy
-**Schedule** / **Away** controls on one glanceable screen. It can also be linked
-from a [Homepage](https://gethomepage.dev/) dashboard.
+door. It puts the time, today's weather, a six-hour rain heads-up, collection
+night reminders, and Eufy **Schedule** / **Away** controls on one glanceable
+screen. It can also be linked from a
+[Homepage](https://gethomepage.dev/) dashboard.
 
 The browser talks only to a local Python service. The Pi fetches and caches
 weather from [Open-Meteo](https://open-meteo.com/) every 10 minutes. Eufy
@@ -22,6 +23,8 @@ bridge.
 - Current temperature, conditions, feels-like temperature, wind, and high/low
 - A prominent umbrella recommendation based on the next six hours
 - Key-free Open-Meteo integration with a 10-minute server-side cache
+- A Wednesday-afternoon-to-Thursday-morning bin card with local 3D artwork
+- Alternating black and green/blue weeks, with the food caddy shown every week
 - One-touch **Schedule** and **Away** controls
 - Reads the HomeBase state back before reporting success
 - Understands Schedule's active-rule behaviour (`guardMode=2`)
@@ -127,6 +130,23 @@ For a precise location, leave `WEATHER_LOCATION` empty and set both
 the Pi's environment file rather than committing them. Open-Meteo's free API is
 appropriate for personal home automation and its data is provided under
 CC BY 4.0; keep the attribution in the dashboard footer.
+
+### Configure bin reminders
+
+The reminder appears from Wednesday noon until Thursday noon. Configure a
+known Thursday collection as the alternating schedule anchor:
+
+```ini
+BIN_COLLECTION_ANCHOR=2026-09-10
+BIN_COLLECTION_ANCHOR_TYPE=black
+BIN_TIMEZONE=Europe/London
+BIN_REMINDER_START_HOUR=12
+BIN_REMINDER_END_HOUR=12
+```
+
+`BIN_COLLECTION_ANCHOR_TYPE` accepts `black` or `blue-green`. Confirm the
+anchor against the council calendar whenever the regular rotation changes;
+bank-holiday exceptions are not fetched automatically.
 
 ### Select the country
 

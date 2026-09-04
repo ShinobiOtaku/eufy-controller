@@ -94,10 +94,53 @@ button { font: inherit; }
 .connection.online .connection-dot { background: var(--green); box-shadow: 0 0 0 4px rgba(81, 223, 165, 0.11); }
 .connection.offline .connection-dot { background: var(--red); box-shadow: 0 0 0 4px rgba(255, 116, 125, 0.11); }
 
-.weather-card, .security-card {
+.weather-card, .security-card, .bin-reminder {
   border: 1px solid var(--border);
   border-radius: 26px;
   box-shadow: var(--shadow);
+}
+
+.bin-reminder {
+  position: relative;
+  min-height: 154px;
+  overflow: hidden;
+  padding: 20px 186px 20px 20px;
+  display: flex;
+  align-items: center;
+  background:
+    radial-gradient(circle at 92% 18%, rgba(255, 255, 255, 0.18), transparent 13rem),
+    linear-gradient(145deg, #3d2c0e, #1d2430 68%);
+  border-color: rgba(255, 201, 106, 0.32);
+}
+
+.bin-reminder[hidden] { display: none; }
+.bin-reminder.blue-green { border-color: rgba(81, 223, 165, 0.32); background: linear-gradient(145deg, #123e38, #14283c 70%); }
+.bin-copy { position: relative; z-index: 2; min-width: 0; }
+.bin-copy h2 { max-width: 330px; margin: 5px 0 0; font-size: clamp(1.25rem, 5vw, 1.72rem); line-height: 1.04; letter-spacing: -0.025em; }
+.bin-copy > p:not(.card-label) { margin: 8px 0 0; color: #c4d2dc; font-size: 0.79rem; }
+.bin-caddy {
+  display: inline-block;
+  margin-top: 12px;
+  padding: 5px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  color: #dbe5eb;
+  font-size: 0.57rem;
+  font-weight: 850;
+  letter-spacing: 0.09em;
+}
+
+.bin-image {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  right: -7px;
+  width: 190px;
+  height: 190px;
+  object-fit: contain;
+  transform: translateY(-49%);
+  filter: drop-shadow(0 15px 16px rgba(0, 0, 0, 0.28));
 }
 
 .weather-card {
@@ -317,6 +360,10 @@ footer a { text-decoration: none; }
   .topbar { min-height: 75px; }
   .connection { padding: 0 10px; }
   #connection-label { display: none; }
+  .bin-reminder { min-height: 142px; padding: 16px 143px 16px 16px; border-radius: 22px; }
+  .bin-copy h2 { font-size: 1.2rem; }
+  .bin-copy > p:not(.card-label) { font-size: 0.69rem; }
+  .bin-image { right: -10px; width: 155px; height: 155px; }
   .weather-card { padding: 17px; border-radius: 22px; }
   .temperature-row { gap: 10px; }
   .temperature { font-size: clamp(4rem, 20vw, 5.2rem); }
@@ -330,6 +377,9 @@ footer a { text-decoration: none; }
 }
 
 @media (max-width: 340px) {
+  .bin-reminder { padding-right: 118px; }
+  .bin-image { width: 132px; height: 132px; }
+  .bin-caddy { font-size: 0.5rem; }
   .temperature-row h1 { font-size: 0.96rem; }
   .weather-icon { width: 66px; height: 66px; }
   .security-heading { align-items: flex-start; }
@@ -343,6 +393,11 @@ footer a { text-decoration: none; }
   .topbar { min-height: 59px; }
   .clock { font-size: 2.75rem; }
   .date { margin-top: 3px; font-size: 0.76rem; }
+  .bin-reminder { min-height: 112px; padding-top: 10px; padding-bottom: 10px; }
+  .bin-copy h2 { font-size: 1.05rem; }
+  .bin-copy > p:not(.card-label) { margin-top: 5px; }
+  .bin-caddy { margin-top: 7px; }
+  .bin-image { width: 132px; height: 132px; }
   .weather-card { padding: 13px 15px; }
   .weather-main { min-height: 73px; }
   .temperature { font-size: 3.75rem; }
@@ -362,6 +417,7 @@ footer a { text-decoration: none; }
 @media (min-width: 760px) and (orientation: landscape) {
   .shell { width: min(100%, 1100px); display: grid; grid-template-columns: 1.15fr 0.85fr; grid-template-rows: auto 1fr auto; }
   .topbar { grid-column: 1 / 3; }
+  .bin-reminder { grid-column: 1 / 3; min-height: 126px; }
   .weather-card, .security-card { align-self: stretch; }
   .security-card { display: flex; flex-direction: column; justify-content: center; }
   footer { grid-column: 1 / 3; }

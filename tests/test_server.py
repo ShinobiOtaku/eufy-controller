@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 from pathlib import Path
 import sys
 import tempfile
@@ -8,12 +9,41 @@ import unittest
 TEST_DATA = tempfile.TemporaryDirectory()
 os.environ["PANEL_PROVIDER"] = "demo"
 os.environ["PANEL_DATA_DIR"] = TEST_DATA.name
+os.environ["BIN_TIMEZONE"] = "UTC"
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "app"))
 
 import server  # noqa: E402
 
 
 class PanelTests(unittest.TestCase):
+    def test_bin_reminder_window_and_black_week(self):
+        timezone = server.BIN_TIMEZONE
+        before = server.bin_reminder(datetime(2026, 9, 9, 11, 59, tzinfo=timezone))
+        wednesday = server.bin_reminder(
+            datetime(2026, 9, 9, 12, 0, tzinfo=timezone)
+        )
+        thursday = server.bin_reminder(
+            datetime(2026, 9, 10, 8, 0, tzinfo=timezone)
+        )
+        after = server.bin_reminder(datetime(2026, 9, 10, 12, 0, tzinfo=timezone))
+
+        self.assertFalse(before["visible"])
+        self.assertEqual(wednesday["collection_type"], "black")
+        self.assertEqual(wednesday["phase"], "tonight")
+        self.assertIn("Food caddy", wednesday["bins"])
+        self.assertEqual(thursday["phase"], "morning")
+        self.assertFalse(after["visible"])
+
+    def test_bin_reminder_alternates_to_green_and_blue(self):
+        reminder = server.bin_reminder(
+            datetime(2026, 9, 16, 18, 0, tzinfo=server.BIN_TIMEZONE)
+        )
+        self.assertEqual(reminder["collection_date"], "2026-09-17")
+        self.assertEqual(reminder["collection_type"], "blue-green")
+        self.assertEqual(
+            reminder["bins"], ["Green bin", "Blue bin", "Food caddy"]
+        )
+
     def test_only_schedule_and_away_are_allowed(self):
         self.assertEqual(server.ALLOWED_MODES, {"schedule", "away"})
 

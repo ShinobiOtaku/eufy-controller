@@ -12,6 +12,11 @@
     date: document.querySelector("#date"),
     connection: document.querySelector("#connection"),
     connectionLabel: document.querySelector("#connection-label"),
+    binReminder: document.querySelector("#bin-reminder"),
+    binKicker: document.querySelector("#bin-kicker"),
+    binTitle: document.querySelector("#bin-title"),
+    binDetail: document.querySelector("#bin-detail"),
+    binImage: document.querySelector("#bin-image"),
     weatherCard: document.querySelector("#weather-card"),
     weatherLocation: document.querySelector("#weather-location"),
     temperature: document.querySelector("#temperature"),
@@ -61,6 +66,35 @@
     elements.connection.classList.toggle("online", online);
     elements.connection.classList.toggle("offline", !online);
     elements.connectionLabel.textContent = label;
+  }
+
+  function renderBins(data) {
+    const visible = Boolean(data?.ok && data.visible);
+    elements.binReminder.hidden = !visible;
+    document.body.classList.toggle("has-bin-reminder", visible);
+    if (!visible) return;
+
+    const greenBlue = data.collection_type === "blue-green";
+    const collectionDate = new Date(`${data.collection_date}T12:00:00`);
+    const dateLabel = new Intl.DateTimeFormat(undefined, {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+    }).format(collectionDate);
+
+    elements.binKicker.textContent = data.phase === "morning" ? "COLLECTION MORNING" : "BIN NIGHT";
+    elements.binTitle.textContent = greenBlue
+      ? "Green & blue bins + food caddy"
+      : "Black bin + food caddy";
+    elements.binDetail.textContent = data.phase === "morning"
+      ? `Collection is this morning · ${dateLabel}`
+      : `Put them out tonight for ${dateLabel}`;
+    elements.binImage.src = apiUrl(data.image);
+    elements.binImage.alt = greenBlue
+      ? "Green and blue wheelie bins with the small food caddy"
+      : "Black wheelie bin with the small food caddy";
+    elements.binReminder.classList.toggle("blue-green", greenBlue);
+    elements.binReminder.classList.toggle("black", !greenBlue);
   }
 
   function renderMode(mode, pending = false, activeMode = "") {
@@ -169,6 +203,17 @@
     }
   }
 
+  async function refreshBins() {
+    try {
+      const response = await fetch(apiUrl("api/bins"), { cache: "no-store" });
+      const data = await readJson(response);
+      if (!response.ok || !data.ok) throw new Error("Unable to read bin schedule");
+      renderBins(data);
+    } catch {
+      renderBins({ ok: false, visible: false });
+    }
+  }
+
   async function setMode(mode) {
     if (busy) return;
     setBusy(true);
@@ -212,12 +257,15 @@
   elements.refresh.addEventListener("click", () => {
     refreshSecurity();
     refreshWeather({ force: true });
+    refreshBins();
   });
 
   updateClock();
   window.setInterval(updateClock, 1000);
   refreshSecurity();
   refreshWeather();
+  refreshBins();
   window.setInterval(() => refreshSecurity({ quiet: true }), 15000);
   window.setInterval(() => refreshWeather(), 10 * 60 * 1000);
+  window.setInterval(() => refreshBins(), 5 * 60 * 1000);
 })();
