@@ -39,6 +39,8 @@ install -o root -g root -m 0644 \
     "$repo_dir/app/static/app.css" \
     "$repo_dir/app/static/app.js" \
     "$repo_dir/app/static/favicon.svg" \
+    "$repo_dir/app/static/bins-black.png" \
+    "$repo_dir/app/static/bins-blue-green.png" \
     /opt/eufy-panel/static/
 
 if [ ! -e /etc/eufy-panel.env ]; then

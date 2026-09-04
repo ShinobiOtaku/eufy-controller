@@ -6,6 +6,7 @@
 systemctl status eufy-panel.service
 systemctl status eufy-security-ws.service
 curl -fsS http://127.0.0.1:8765/api/health
+curl -fsS http://127.0.0.1:8765/api/weather
 ```
 
 A live health response looks like:
@@ -48,6 +49,19 @@ sudo systemctl restart eufy-panel.service
 ```
 
 This does not delete credentials or bridge state.
+
+## Change the weather location
+
+Set `WEATHER_LOCATION` plus the optional `WEATHER_COUNTRY_CODE` and
+`WEATHER_LOCATION_LABEL` in `/etc/eufy-panel.env`, then restart the service.
+Alternatively configure both `WEATHER_LATITUDE` and `WEATHER_LONGITUDE`.
+
+```bash
+sudo systemctl restart eufy-panel.service
+```
+
+The next browser refresh fetches a new forecast. Normal forecast responses are
+cached for 10 minutes to reduce external API traffic.
 
 ## Update the application
 
