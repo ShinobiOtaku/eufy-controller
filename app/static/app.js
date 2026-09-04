@@ -43,6 +43,7 @@
   let csrf = "";
   let currentMode = "unknown";
   let busy = false;
+  const binPreview = new URLSearchParams(window.location.search).get("preview") === "bins";
 
   const apiUrl = (path) => new URL(path, window.location.href).toString();
   const rounded = (value, suffix = "°") => Number.isFinite(Number(value)) ? `${Math.round(Number(value))}${suffix}` : `--${suffix}`;
@@ -82,13 +83,17 @@
       month: "long",
     }).format(collectionDate);
 
-    elements.binKicker.textContent = data.phase === "morning" ? "COLLECTION MORNING" : "BIN NIGHT";
+    elements.binKicker.textContent = data.phase === "morning"
+      ? "COLLECTION MORNING"
+      : (data.phase === "preview" ? "NEXT COLLECTION" : "BIN NIGHT");
     elements.binTitle.textContent = greenBlue
       ? "Green & blue bins + food caddy"
       : "Black bin + food caddy";
     elements.binDetail.textContent = data.phase === "morning"
       ? `Collection is this morning · ${dateLabel}`
-      : `Put them out tonight for ${dateLabel}`;
+      : (data.phase === "preview"
+        ? `Due ${dateLabel}`
+        : `Put them out tonight for ${dateLabel}`);
     elements.binImage.src = apiUrl(data.image);
     elements.binImage.alt = greenBlue
       ? "Green and blue wheelie bins with the small food caddy"
@@ -205,7 +210,7 @@
 
   async function refreshBins() {
     try {
-      const response = await fetch(apiUrl("api/bins"), { cache: "no-store" });
+      const response = await fetch(apiUrl(`api/bins${binPreview ? "?preview=1" : ""}`), { cache: "no-store" });
       const data = await readJson(response);
       if (!response.ok || !data.ok) throw new Error("Unable to read bin schedule");
       renderBins(data);

@@ -148,6 +148,9 @@ BIN_REMINDER_END_HOUR=12
 anchor against the council calendar whenever the regular rotation changes;
 bank-holiday exceptions are not fetched automatically.
 
+To preview the next reminder outside its normal time window, open the panel
+with `?preview=bins`. This is view-only and does not change the schedule.
+
 ### Select the country
 
 Before signing in, edit `/etc/eufy-security-ws.env` and set `COUNTRY` to the

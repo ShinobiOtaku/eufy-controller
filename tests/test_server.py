@@ -44,6 +44,15 @@ class PanelTests(unittest.TestCase):
             reminder["bins"], ["Green bin", "Blue bin", "Food caddy"]
         )
 
+    def test_bin_preview_shows_next_collection_outside_window(self):
+        reminder = server.bin_reminder(
+            datetime(2026, 9, 4, 14, 0, tzinfo=server.BIN_TIMEZONE), force=True
+        )
+        self.assertTrue(reminder["visible"])
+        self.assertEqual(reminder["phase"], "preview")
+        self.assertEqual(reminder["collection_date"], "2026-09-10")
+        self.assertEqual(reminder["collection_type"], "black")
+
     def test_only_schedule_and_away_are_allowed(self):
         self.assertEqual(server.ALLOWED_MODES, {"schedule", "away"})
 

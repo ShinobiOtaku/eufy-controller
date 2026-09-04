@@ -97,7 +97,7 @@ def homepage_status(state: dict) -> tuple[str, str]:
     return "Unavailable", active_mode
 
 
-def bin_reminder(now: datetime | None = None) -> dict:
+def bin_reminder(now: datetime | None = None, force: bool = False) -> dict:
     """Return the collection reminder for Wednesday afternoon/Thursday morning."""
     current = now or datetime.now(BIN_TIMEZONE)
     if current.tzinfo is None:
@@ -113,6 +113,13 @@ def bin_reminder(now: datetime | None = None) -> dict:
     elif current.weekday() == 3 and current.hour < BIN_REMINDER_END_HOUR:
         collection_date = current.date()
         phase = "morning"
+
+    if collection_date is None and force:
+        days_until_thursday = (3 - current.weekday()) % 7
+        if days_until_thursday == 0:
+            days_until_thursday = 7
+        collection_date = current.date() + timedelta(days=days_until_thursday)
+        phase = "preview"
 
     if collection_date is None:
         return {"ok": True, "visible": False}
@@ -833,7 +840,8 @@ class PanelHandler(BaseHTTPRequestHandler):
                 )
             return
         if path == "/api/bins":
-            self._json(HTTPStatus.OK, bin_reminder())
+            query = parse.parse_qs(parse.urlparse(self.path).query)
+            self._json(HTTPStatus.OK, bin_reminder(force=query.get("preview") == ["1"]))
             return
         if path == "/api/status":
             _, session, set_cookie = self._session()
