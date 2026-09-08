@@ -2,11 +2,13 @@
 
 ## Components
 
-The controller has three runtime components:
+The dashboard has four runtime components:
 
 1. A static touch-oriented browser interface.
-2. A small Python HTTP service that validates requests and translates modes.
-3. The community `eufy-security-ws` Docker container, which owns the Eufy
+2. A small Python HTTP service that caches weather, validates requests, and
+   translates Eufy modes.
+3. Open-Meteo's forecast and geocoding APIs.
+4. The community `eufy-security-ws` Docker container, which owns the Eufy
    session and talks to the cloud and HomeBase.
 
 nginx is the public entry point. The Python service listens on
@@ -31,18 +33,29 @@ before reaching the bridge.
 
 ## Request flow
 
-1. `GET /api/status` establishes a short-lived browser session and returns a
+1. `GET /api/weather` returns a sanitised, cached forecast without exposing
+   the configured coordinates.
+2. `GET /api/status` establishes a short-lived browser session and returns a
    CSRF token.
-2. `GET /api/homepage` returns only mode, display status, connection, and
+3. `GET /api/homepage` returns only mode, display status, connection, and
    provider fields for Homepage's server-side widget polling; it does not
    create a browser session.
    When Schedule is selected, its compact `status` combines the guard mode and
    active rule, such as `Schedule · Home`.
-3. `POST /api/mode` requires the browser token and accepts only `schedule` or
+4. `POST /api/mode` requires the browser token and accepts only `schedule` or
    `away`.
-4. The backend opens a localhost WebSocket connection using API schema 12.
-5. It sends `station.set_guard_mode` to the selected HomeBase.
-6. It reads station properties back and reports the observed state.
+5. The backend opens a localhost WebSocket connection using API schema 12.
+6. It sends `station.set_guard_mode` to the selected HomeBase.
+7. It reads station properties back and reports the observed state.
+
+## Weather flow
+
+`WEATHER_LOCATION` is resolved through Open-Meteo's geocoding API once per
+process, optionally filtered by `WEATHER_COUNTRY_CODE`. Explicit latitude and
+longitude can be configured instead. The forecast is cached for at least five
+minutes (10 minutes by default), and a stale cached response is preferred over
+an empty weather card during a temporary upstream outage. Coordinates are sent
+from the Pi to Open-Meteo but never returned to the kiosk browser.
 
 ## HomeBase selection
 

@@ -36,7 +36,15 @@ changes.
 - State-changing requests require a session-bound CSRF token.
 - Session cookies are `HttpOnly` and `SameSite=Strict`.
 - Responses set a restrictive Content Security Policy.
-- The browser receives only panel status and station mode information.
+- The browser receives only display-ready weather, panel status, and station
+  mode information. Weather coordinates are not included in API responses.
+
+## Weather privacy
+
+The Pi sends the configured location search or coordinates to Open-Meteo. The
+free API may retain server logs containing coordinates for up to 90 days. Use a
+nearby town rather than precise coordinates if that privacy tradeoff is
+preferable. The phone browser connects only to the local dashboard.
 
 The default deployment uses HTTP because it targets a private LAN. Configure
 TLS at nginx if the network is not fully trusted.

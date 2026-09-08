@@ -1,5 +1,5 @@
 [Unit]
-Description=Local Eufy touchscreen security panel
+Description=Local front-door dashboard
 After=network-online.target
 Wants=network-online.target
 

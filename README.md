@@ -1,12 +1,16 @@
-# Eufy Front-Door Controller
+# Front-Door Dashboard
 
-A small, locally hosted touchscreen panel for switching a Eufy HomeBase between
-**Schedule** and **Away**. It was designed for a Raspberry Pi at the front door
-and can be linked from a [Homepage](https://gethomepage.dev/) dashboard.
+A small, locally hosted dashboard for the phone or touchscreen beside the front
+door. It puts the time, today's weather, a six-hour rain heads-up, collection
+night reminders, and Eufy **Schedule** / **Away** controls on one glanceable
+screen. It can also be linked from a
+[Homepage](https://gethomepage.dev/) dashboard.
 
-The browser talks only to a local Python service. Eufy credentials stay in
-root-owned files on the Pi and are consumed by the community
-[`eufy-security-ws`](https://github.com/bropat/eufy-security-ws) bridge.
+The browser talks only to a local Python service. The Pi fetches and caches
+weather from [Open-Meteo](https://open-meteo.com/) every 10 minutes. Eufy
+credentials stay in root-owned files on the Pi and are consumed by the
+community [`eufy-security-ws`](https://github.com/bropat/eufy-security-ws)
+bridge.
 
 > [!IMPORTANT]
 > Eufy does not provide an official public local API for this workflow. This
@@ -15,6 +19,12 @@ root-owned files on the Pi and are consumed by the community
 
 ## What it does
 
+- Portrait-first, kiosk-friendly clock and date
+- Current temperature, conditions, feels-like temperature, wind, and high/low
+- A prominent umbrella recommendation based on the next six hours
+- Key-free Open-Meteo integration with a 10-minute server-side cache
+- A Wednesday-afternoon-to-Thursday-morning bin card with local 3D artwork
+- Alternating black and green/blue weeks, with the food caddy shown every week
 - One-touch **Schedule** and **Away** controls
 - Reads the HomeBase state back before reporting success
 - Understands Schedule's active-rule behaviour (`guardMode=2`)
@@ -34,19 +44,20 @@ including Disarmed and Home.
 ## Architecture
 
 ```text
-Touchscreen browser
+Kiosk browser / Homepage
         │ HTTP /eufy/
         ▼
 nginx / Homepage host
         │ 127.0.0.1:8765
         ▼
 Python panel service
-        │ WebSocket 127.0.0.1:3001
-        ▼
-eufy-security-ws container
-        │ Eufy cloud / HomeBase P2P
-        ▼
-HomeBase (including S380 / T8030)
+        ├── HTTPS → Open-Meteo forecast API
+        └── WebSocket 127.0.0.1:3001
+                        ▼
+              eufy-security-ws container
+                        │ Eufy cloud / HomeBase P2P
+                        ▼
+              HomeBase (including S380 / T8030)
 ```
 
 See [Architecture](docs/architecture.md) for the trust boundaries and mode
@@ -56,7 +67,7 @@ mapping.
 
 - Raspberry Pi OS or another Debian-family distribution
 - 64-bit or 32-bit ARM supported by the upstream Docker image
-- `systemd`
+- `systemd` and outbound HTTPS for weather
 - Docker
 - Python 3 with `websockets`
 - nginx or another reverse proxy
@@ -96,6 +107,49 @@ Adjust the public hostname in
 then merge that service into Homepage's `services.yaml`. The widget refreshes
 every 10 seconds and displays `Schedule · Home`, `Schedule · Away`, `Armed`, or
 `Unavailable`, depending on the selected guard mode and active schedule rule.
+
+### Configure weather
+
+Edit `/etc/eufy-panel.env` and set a town or postcode. The optional country
+filter makes the first geocoding result unambiguous:
+
+```ini
+WEATHER_LOCATION=Your town or postcode
+WEATHER_COUNTRY_CODE=GB
+WEATHER_LOCATION_LABEL=Your town
+```
+
+Restart the dashboard after changing the file:
+
+```bash
+sudo systemctl restart eufy-panel.service
+```
+
+For a precise location, leave `WEATHER_LOCATION` empty and set both
+`WEATHER_LATITUDE` and `WEATHER_LONGITUDE`. Keep personal location values in
+the Pi's environment file rather than committing them. Open-Meteo's free API is
+appropriate for personal home automation and its data is provided under
+CC BY 4.0; keep the attribution in the dashboard footer.
+
+### Configure bin reminders
+
+The reminder appears from Wednesday noon until Thursday noon. Configure a
+known Thursday collection as the alternating schedule anchor:
+
+```ini
+BIN_COLLECTION_ANCHOR=2026-09-10
+BIN_COLLECTION_ANCHOR_TYPE=black
+BIN_TIMEZONE=Europe/London
+BIN_REMINDER_START_HOUR=12
+BIN_REMINDER_END_HOUR=12
+```
+
+`BIN_COLLECTION_ANCHOR_TYPE` accepts `black` or `blue-green`. Confirm the
+anchor against the council calendar whenever the regular rotation changes;
+bank-holiday exceptions are not fetched automatically.
+
+To preview the next reminder outside its normal time window, open the panel
+with `?preview=bins`. This is view-only and does not change the schedule.
 
 ### Select the country
 
